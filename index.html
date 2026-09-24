@@ -119,7 +119,7 @@
 <header>
   <div class="header-inner">
     <div>
-      <h1>Faustball Turnierrechner</h1>
+      <h1>U16 DM Turnierrechner</h1>
       <div class="subtitle">16 Teams · 4 Gruppen · KO-Phase mit Platzierungsspielen</div>
     </div>
     <button class="btn" id="resetBtn">Zurücksetzen</button>
@@ -398,7 +398,7 @@ function renderGroup(group) {
   table.appendChild(el('thead', null, (() => {
     const tr = el('tr');
     ['#', 'Team'].forEach(h => tr.appendChild(el(h === '#' ? 'th' : 'th', h === '#' ? {} : {}, h)));
-    ['Sp','S','U','N','Pkt','Stz','Bälle'].forEach(h => tr.appendChild(el('th', { class: 'num' }, h)));
+    ['Sp','S','U','N','Pkt','Stz','Ball'].forEach(h => tr.appendChild(el('th', { class: 'num' }, h)));
     return tr;
   })()));
   const tbody = el('tbody');
