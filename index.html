@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Faustball Turnierrechner</title>
+<title>U16 DM Turnierrechner</title>
 <style>
   :root {
     --bg: #f6f7f5;
@@ -398,7 +398,7 @@ function renderGroup(group) {
   table.appendChild(el('thead', null, (() => {
     const tr = el('tr');
     ['#', 'Team'].forEach(h => tr.appendChild(el(h === '#' ? 'th' : 'th', h === '#' ? {} : {}, h)));
-    ['Sp','S','U','N','Pkt','Sätze','Bälle'].forEach(h => tr.appendChild(el('th', { class: 'num' }, h)));
+    ['Sp','S','U','N','Pkt','Stz','Bälle'].forEach(h => tr.appendChild(el('th', { class: 'num' }, h)));
     return tr;
   })()));
   const tbody = el('tbody');
