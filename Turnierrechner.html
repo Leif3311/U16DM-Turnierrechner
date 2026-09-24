@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Faustball Turnierrechner</title>
+<style>
+  :root {
+    --bg: #f6f7f5;
+    --card: #ffffff;
+    --border: #e2e8e0;
+    --muted: #6b7280;
+    --emerald: #047857;
+    --emerald-light: #d1fae5;
+    --amber: #f59e0b;
+    --amber-light: #fef3c7;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: #1f2937; }
+  header { background: #fff; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 10; }
+  .header-inner { max-width: 960px; margin: 0 auto; padding: 16px; display: flex; justify-content: space-between; align-items: center; }
+  h1 { font-size: 20px; font-weight: 700; }
+  .subtitle { font-size: 12px; color: var(--muted); }
+  .tabs { max-width: 960px; margin: 0 auto; padding: 0 16px 12px; display: flex; gap: 6px; overflow-x: auto; }
+  .tab { padding: 6px 14px; border-radius: 999px; font-size: 14px; white-space: nowrap; border: none; background: #eef0ec; color: var(--muted); cursor: pointer; }
+  .tab.active { background: var(--emerald); color: #fff; }
+  main { max-width: 960px; margin: 0 auto; padding: 24px 16px; }
+  .hint { font-size: 14px; color: var(--muted); margin-bottom: 16px; }
+  .grid2 { display: grid; gap: 24px; }
+  @media (min-width: 768px) { .grid2 { grid-template-columns: 1fr 1fr; } }
+  .group-card { border: 1px solid var(--border); border-radius: 12px; background: var(--card); overflow: hidden; }
+  .group-head { background: var(--emerald); color: #fff; padding: 10px 16px; font-weight: 600; display: flex; justify-content: space-between; font-size: 15px; }
+  .group-head span:last-child { font-size: 12px; font-weight: 400; opacity: .8; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; padding: 8px 6px; font-size: 11px; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--border); }
+  th.num { text-align: center; }
+  td { padding: 8px 6px; border-bottom: 1px solid var(--border); }
+  td.num { text-align: center; }
+  td.team { font-weight: 500; }
+  td.pts { font-weight: 700; }
+  .rank { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; font-size: 12px; font-weight: 700; background: #eef0ec; color: var(--muted); }
+  .rank.r1 { background: var(--emerald-light); color: var(--emerald); }
+  .rank.r2 { background: #ecfdf5; color: var(--emerald); }
+  .matches { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+  .match { border: 1px solid var(--border); border-radius: 12px; background: var(--card); padding: 16px; }
+  .match.disabled { opacity: .55; }
+  .match-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .match-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+  .badge { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--emerald-light); color: var(--emerald); }
+  .badge.draw { background: var(--amber-light); color: #92400e; }
+  .row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .row:last-child { margin-bottom: 0; }
+  .row .name { flex: 1; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .row .name.win { font-weight: 700; color: var(--emerald); }
+  input.score { width: 48px; height: 36px; text-align: center; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; }
+  input.score:disabled { background: #f3f4f6; }
+  .ko-grid { display: grid; gap: 12px; }
+  @media (min-width: 768px) { .ko-grid { grid-template-columns: 1fr 1fr; } }
+  .ko-grid.single { max-width: 480px; margin: 0 auto; }
+  .ranking { max-width: 640px; margin: 0 auto; display: flex; flex-direction: column; gap: 8px; }
+  .rank-row { display: flex; align-items: center; gap: 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--card); padding: 12px 16px; }
+  .rank-row.p1 { border-color: #fcd34d; background: #fffbeb; }
+  .rank-row.p2 { border-color: #cbd5e1; background: #f8fafc; }
+  .rank-row.p3 { border-color: #fed7aa; background: #fff7ed; }
+  .rank-row .medal { width: 32px; text-align: center; font-size: 20px; font-weight: 700; }
+  .rank-row .team-name { flex: 1; font-weight: 500; }
+  .rank-row .place { font-size: 14px; color: var(--muted); }
+  .empty { text-align: center; color: var(--muted); padding: 80px 16px; max-width: 480px; margin: 0 auto; }
+  .btn { padding: 6px 14px; border-radius: 8px; border: 1px solid var(--border); background: #fff; font-size: 13px; cursor: pointer; }
+  .btn:hover { background: #f9fafb; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div>
+      <h1>Faustball Turnierrechner</h1>
+      <div class="subtitle">16 Teams · 4 Gruppen · KO-Phase mit Platzierungsspielen</div>
+    </div>
+    <button class="btn" id="resetBtn">Zurücksetzen</button>
+  </div>
+  <div class="tabs" id="tabs"></div>
+</header>
+
+<main id="main"></main>
+
+<script>
+const GROUPS = {
+  A: ['TSV Essel', 'SG TV Augsburg', 'NLV Vaihingen', 'TSV Malmsheim'],
+  B: ['TSV LoLa', 'TV Oberweier', 'MTV Oldendorf', 'TV Bretten'],
+  C: ['TV Brettorf', 'TSV Karlsdorf', 'SC DHfK Leipzig', 'Ahlhorner SV'],
+  D: ['TV Stammheim', 'SV Kubschütz', 'Ohligser TV', 'TSV Gnutz'],
+};
+const GROUP_NAMES = ['A', 'B', 'C', 'D'];
+const ROUND_ROBIN = [
+  { home: 0, away: 1 }, { home: 2, away: 3 },
+  { home: 0, away: 2 }, { home: 1, away: 3 },
+  { home: 0, away: 3 }, { home: 1, away: 2 },
+];
+const KO_MATCHES = {
+  AF1: { round: 'AF', slots: ['1A', '4C'], label: 'Achtelfinale 1' },
+  AF2: { round: 'AF', slots: ['1B', '4D'], label: 'Achtelfinale 2' },
+  AF3: { round: 'AF', slots: ['1C', '4A'], label: 'Achtelfinale 3' },
+  AF4: { round: 'AF', slots: ['1D', '4B'], label: 'Achtelfinale 4' },
+  AF5: { round: 'AF', slots: ['2A', '3C'], label: 'Achtelfinale 5' },
+  AF6: { round: 'AF', slots: ['2B', '3D'], label: 'Achtelfinale 6' },
+  AF7: { round: 'AF', slots: ['2C', '3A'], label: 'Achtelfinale 7' },
+  AF8: { round: 'AF', slots: ['2D', '3B'], label: 'Achtelfinale 8' },
+  VF1: { round: 'VF', slots: ['W-AF1', 'W-AF6'], label: 'Viertelfinale 1' },
+  VF2: { round: 'VF', slots: ['W-AF2', 'W-AF5'], label: 'Viertelfinale 2' },
+  VF3: { round: 'VF', slots: ['W-AF3', 'W-AF8'], label: 'Viertelfinale 3' },
+  VF4: { round: 'VF', slots: ['W-AF4', 'W-AF7'], label: 'Viertelfinale 4' },
+  HF1: { round: 'HF', slots: ['W-VF1', 'W-VF3'], label: 'Halbfinale 1' },
+  HF2: { round: 'HF', slots: ['W-VF2', 'W-VF4'], label: 'Halbfinale 2' },
+  F:  { round: 'F',  slots: ['W-HF1', 'W-HF2'], label: 'Finale' },
+  PM1: { round: 'PM', slots: ['L-AF1', 'L-AF6'], label: 'Platzierungsspiel 1' },
+  PM2: { round: 'PM', slots: ['L-AF2', 'L-AF5'], label: 'Platzierungsspiel 2' },
+  PM3: { round: 'PM', slots: ['L-AF3', 'L-AF8'], label: 'Platzierungsspiel 3' },
+  PM4: { round: 'PM', slots: ['L-AF4', 'L-AF7'], label: 'Platzierungsspiel 4' },
+  PM5: { round: 'PM', slots: ['W-PM1', 'W-PM3'], label: 'Platzierungsspiel 5' },
+  PM6: { round: 'PM', slots: ['W-PM2', 'W-PM4'], label: 'Platzierungsspiel 6' },
+  PM7: { round: 'PM', slots: ['L-PM1', 'L-PM3'], label: 'Platzierungsspiel 7' },
+  PM8: { round: 'PM', slots: ['L-PM2', 'L-PM4'], label: 'Platzierungsspiel 8' },
+  PM9:  { round: 'PM', slots: ['L-VF1', 'L-VF3'], label: 'Platzierungsspiel 9' },
+  PM10: { round: 'PM', slots: ['L-VF2', 'L-VF4'], label: 'Platzierungsspiel 10' },
+  P15: { round: 'PM', slots: ['L-PM7', 'L-PM8'], label: 'Spiel um Platz 15' },
+  P13: { round: 'PM', slots: ['W-PM7', 'W-PM8'], label: 'Spiel um Platz 13' },
+  P11: { round: 'PM', slots: ['L-PM5', 'L-PM6'], label: 'Spiel um Platz 11' },
+  P9:  { round: 'PM', slots: ['W-PM5', 'W-PM6'], label: 'Spiel um Platz 9' },
+  P7:  { round: 'PM', slots: ['L-PM9', 'L-PM10'], label: 'Spiel um Platz 7' },
+  P5:  { round: 'PM', slots: ['W-PM9', 'W-PM10'], label: 'Spiel um Platz 5' },
+  P3:  { round: 'PM', slots: ['L-HF1', 'L-HF2'], label: 'Spiel um Platz 3' },
+};
+const AF_IDS = ['AF1','AF2','AF3','AF4','AF5','AF6','AF7','AF8'];
+const VF_IDS = ['VF1','VF2','VF3','VF4'];
+const HF_IDS = ['HF1','HF2'];
+const PLACEMENT_ORDER = ['PM1','PM2','PM3','PM4','PM5','PM6','PM7','PM8','PM9','PM10','P15','P13','P11','P9','P7','P5','P3'];
+const TABS = [
+  { id: 'gruppen', label: 'Gruppenphase' },
+  { id: 'achtel', label: 'Achtelfinale' },
+  { id: 'viertel', label: 'Viertelfinale' },
+  { id: 'halb', label: 'Halbfinale' },
+  { id: 'finale', label: 'Finale' },
+  { id: 'platz', label: 'Platzierungsspiele' },
+  { id: 'endstand', label: 'Endstand' },
+];
+const STORAGE_KEY = 'faustball-turnier-results-v1';
+
+let results = loadResults();
+let tab = 'gruppen';
+
+function loadResults() {
+  try { const raw = localStorage.getItem(STORAGE_KEY); return raw ? JSON.parse(raw) : {}; }
+  catch { return {}; }
+}
+function saveResults() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(results)); } catch {}
+}
+const validSet = s => s && s.a != null && s.a !== '' && s.b != null && s.b !== '';
+const num = v => parseInt(v, 10);
+const setWinner = s => {
+  if (!validSet(s)) return null;
+  const a = num(s.a), b = num(s.b);
+  return a > b ? 'H' : b > a ? 'A' : null;
+};
+
+function computeGroupStandings(group) {
+  const teams = GROUPS[group];
+  const st = teams.map((name, i) => ({
+    name, index: i, played: 0, wins: 0, draws: 0, losses: 0,
+    points: 0, setsWon: 0, setsLost: 0, ballsFor: 0, ballsAgainst: 0,
+  }));
+  ROUND_ROBIN.forEach((m, mi) => {
+    const res = results[group + '-' + mi];
+    if (!res || !res.sets) return;
+    const sets = res.sets.filter(validSet);
+    if (sets.length < 2) return;
+    const s = sets.slice(0, 2);
+    if (num(s[0].a) === num(s[0].b) || num(s[1].a) === num(s[1].b)) return;
+    let hs = 0, as = 0;
+    s.forEach(set => {
+      const a = num(set.a), b = num(set.b);
+      if (a > b) hs++; else if (b > a) as++;
+      st[m.home].ballsFor += a; st[m.home].ballsAgainst += b;
+      st[m.away].ballsFor += b; st[m.away].ballsAgainst += a;
+    });
+    st[m.home].played++; st[m.away].played++;
+    st[m.home].setsWon += hs; st[m.home].setsLost += as;
+    st[m.away].setsWon += as; st[m.away].setsLost += hs;
+    if (hs > as) { st[m.home].wins++; st[m.home].points += 2; st[m.away].losses++; }
+    else if (as > hs) { st[m.away].wins++; st[m.away].points += 2; st[m.home].losses++; }
+    else { st[m.home].draws++; st[m.away].draws++; st[m.home].points++; st[m.away].points++; }
+  });
+  st.sort((a, b) => {
+    if (b.points !== a.points) return b.points - a.points;
+    const aSD = a.setsWon - a.setsLost, bSD = b.setsWon - b.setsLost;
+    if (bSD !== aSD) return bSD - aSD;
+    return (b.ballsFor - b.ballsAgainst) - (a.ballsFor - a.ballsAgainst);
+  });
+  return st;
+}
+
+function resolveTournament() {
+  const cache = {};
+  function resolveSlot(slot) {
+    if (/^[1-4][A-D]$/.test(slot)) {
+      const st = computeGroupStandings(slot[1]);
+      return st[num(slot[0]) - 1]?.name;
+    }
+    const r = resolveMatch(slot.substring(2));
+    if (!r || !r.winner) return undefined;
+    return slot[0] === 'W' ? r.winner : r.loser;
+  }
+  function resolveMatch(id) {
+    if (cache[id] !== undefined) return cache[id];
+    const match = KO_MATCHES[id];
+    if (!match) { cache[id] = null; return null; }
+    const homeTeam = resolveSlot(match.slots[0]);
+    const awayTeam = resolveSlot(match.slots[1]);
+    const sets = (results[id]?.sets || []).filter(validSet);
+    let winner = null, loser = null, hs = 0, as = 0;
+    if (homeTeam && awayTeam && sets.length >= 2) {
+      sets.forEach(s => { const a = num(s.a), b = num(s.b); if (a > b) hs++; else if (b > a) as++; });
+      if (hs >= 2 || as >= 2) {
+        winner = hs > as ? homeTeam : awayTeam;
+        loser = hs > as ? awayTeam : homeTeam;
+      }
+    }
+    cache[id] = { homeTeam, awayTeam, winner, loser, homeSets: hs, awaySets: as };
+    return cache[id];
+  }
+  const resolved = {};
+  Object.keys(KO_MATCHES).forEach(id => { resolved[id] = resolveMatch(id); });
+  return resolved;
+}
+
+function computeFinalRanking(resolved) {
+  const ranking = [];
+  const place = (id, wp, lp) => {
+    const r = resolved[id];
+    if (!r || !r.winner) return;
+    ranking.push({ place: wp, team: r.winner });
+    ranking.push({ place: lp, team: r.loser });
+  };
+  place('F', 1, 2); place('P3', 3, 4); place('P5', 5, 6); place('P7', 7, 8);
+  place('P9', 9, 10); place('P11', 11, 12); place('P13', 13, 14); place('P15', 15, 16);
+  ranking.sort((a, b) => a.place - b.place);
+  return ranking;
+}
+
+function el(tag, props, ...children) {
+  const e = document.createElement(tag);
+  if (props) for (const [k, v] of Object.entries(props)) {
+    if (k === 'class') e.className = v;
+    else if (k === 'html') e.innerHTML = v;
+    else e.setAttribute(k, v);
+  }
+  children.forEach(c => {
+    if (c == null) return;
+    e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c);
+  });
+  return e;
+}
+
+function renderTabs() {
+  const container = document.getElementById('tabs');
+  container.innerHTML = '';
+  TABS.forEach(t => {
+    const btn = el('button', { class: 'tab' + (tab === t.id ? ' active' : '') }, t.label);
+    btn.onclick = () => { tab = t.id; render(); };
+    container.appendChild(btn);
+  });
+}
+
+function renderMatch(label, homeTeam, awayTeam, sets, matchId, mode) {
+  let display = [...(sets || [])];
+  while (display.length < 2) display.push({ a: '', b: '' });
+  if (mode === 'ko') {
+    const w1 = setWinner(display[0]), w2 = setWinner(display[1]);
+    if (w1 && w2 && w1 !== w2) { while (display.length < 3) display.push({ a: '', b: '' }); }
+    else display = display.slice(0, 2);
+  } else display = display.slice(0, 2);
+
+  let hs = 0, as = 0;
+  display.forEach(s => { const w = setWinner(s); if (w === 'H') hs++; else if (w === 'A') as++; });
+  const complete = mode === 'group' ? display.every(s => setWinner(s)) : (hs >= 2 || as >= 2);
+  const winner = hs > as ? 'H' : as > hs ? 'A' : null;
+  const isDraw = mode === 'group' && complete && hs === as;
+  const disabled = !homeTeam || !awayTeam;
+
+  const card = el('div', { class: 'match' + (disabled ? ' disabled' : '') });
+  const head = el('div', { class: 'match-head' },
+    el('span', { class: 'match-label' }, label),
+    complete ? el('span', { class: 'badge' + (isDraw ? ' draw' : '') }, hs + ':' + as) : null
+  );
+  card.appendChild(head);
+
+  const update = (i, side, val) => {
+    let next = [...display];
+    next[i] = { ...next[i], [side]: val };
+    if (mode === 'ko') {
+      const w1 = setWinner(next[0]), w2 = setWinner(next[1]);
+      if (!(w1 && w2 && w1 !== w2)) next = next.slice(0, 2);
+    }
+    results[matchId] = { sets: next };
+    saveResults();
+    render();
+  };
+
+  ['H', 'A'].forEach(side => {
+    const row = el('div', { class: 'row' });
+    const name = el('span', { class: 'name' + (winner === side && complete ? ' win' : '') },
+      (side === 'H' ? homeTeam : awayTeam) || '—');
+    row.appendChild(name);
+    display.forEach((s, i) => {
+      const input = el('input', {
+        class: 'score', type: 'number', min: '0', max: '99',
+        value: side === 'H' ? s.a : s.b
+      });
+      if (disabled) input.disabled = true;
+      input.oninput = e => update(i, side === 'H' ? 'a' : 'b', e.target.value);
+      row.appendChild(input);
+    });
+    card.appendChild(row);
+  });
+  return card;
+}
+
+function renderGroup(group) {
+  const teams = GROUPS[group];
+  const st = computeGroupStandings(group);
+  const wrap = el('div');
+  const card = el('div', { class: 'group-card' });
+  card.appendChild(el('div', { class: 'group-head' }, el('span', null, 'Gruppe ' + group), el('span', null, '2 Sätze bis 11')));
+  const table = el('table');
+  table.appendChild(el('thead', null, (() => {
+    const tr = el('tr');
+    ['#', 'Team'].forEach(h => tr.appendChild(el(h === '#' ? 'th' : 'th', h === '#' ? {} : {}, h)));
+    ['Sp','S','U','N','Pkt','Sätze','Bälle'].forEach(h => tr.appendChild(el('th', { class: 'num' }, h)));
+    return tr;
+  })()));
+  const tbody = el('tbody');
+  st.forEach((t, i) => {
+    const tr = el('tr');
+    tr.appendChild(el('td', null, el('span', { class: 'rank' + (i < 2 ? ' r' + (i + 1) : '') }, String(i + 1))));
+    tr.appendChild(el('td', { class: 'team' }, t.name));
+    [t.played, t.wins, t.draws, t.losses].forEach(v => tr.appendChild(el('td', { class: 'num' }, String(v))));
+    tr.appendChild(el('td', { class: 'num pts' }, String(t.points)));
+    tr.appendChild(el('td', { class: 'num' }, t.setsWon + ':' + t.setsLost));
+    tr.appendChild(el('td', { class: 'num' }, t.ballsFor + ':' + t.ballsAgainst));
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  card.appendChild(table);
+  wrap.appendChild(card);
+
+  const matches = el('div', { class: 'matches' });
+  ROUND_ROBIN.forEach((m, mi) => {
+    matches.appendChild(renderMatch('Spiel ' + (mi + 1), teams[m.home], teams[m.away],
+      results[group + '-' + mi]?.sets, group + '-' + mi, 'group'));
+  });
+  wrap.appendChild(matches);
+  return wrap;
+}
+
+function renderKO(matchIds, columns) {
+  const resolved = resolveTournament();
+  const grid = el('div', { class: 'ko-grid' + (columns === 1 ? ' single' : '') });
+  matchIds.forEach(id => {
+    const match = KO_MATCHES[id];
+    const r = resolved[id];
+    grid.appendChild(renderMatch(match.label, r?.homeTeam, r?.awayTeam,
+      results[id]?.sets, id, 'ko'));
+  });
+  return grid;
+}
+
+function renderRanking() {
+  const resolved = resolveTournament();
+  const ranking = computeFinalRanking(resolved);
+  if (ranking.length === 0) {
+    return el('div', { class: 'empty' }, 'Sobald Spiele entschieden sind, erscheint hier der Endstand – Platz 1 bis 16.');
+  }
+  const medals = { 1: '🥇', 2: '🥈', 3: '🥉' };
+  const wrap = el('div', { class: 'ranking' });
+  ranking.forEach(r => {
+    wrap.appendChild(el('div', { class: 'rank-row p' + r.place },
+      el('span', { class: 'medal' }, medals[r.place] || String(r.place)),
+      el('span', { class: 'team-name' }, r.team),
+      el('span', { class: 'place' }, 'Platz ' + r.place)
+    ));
+  });
+  return wrap;
+}
+
+function render() {
+  renderTabs();
+  const main = document.getElementById('main');
+  main.innerHTML = '';
+  if (tab === 'gruppen') {
+    const grid = el('div', { class: 'grid2' });
+    GROUP_NAMES.forEach(g => grid.appendChild(renderGroup(g)));
+    main.appendChild(grid);
+  } else if (tab === 'achtel') {
+    main.appendChild(el('p', { class: 'hint' }, 'Achtelfinale – zwei Gewinnsätze bis 11 (mit 2 Punkten Vorsprung, max. 15). Die Paarungen ergeben sich aus den Gruppenplätzen.'));
+    main.appendChild(renderKO(AF_IDS));
+  } else if (tab === 'viertel') {
+    main.appendChild(el('p', { class: 'hint' }, 'Viertelfinale – Sieger der Achtelfinale in der festgelegten Reihenfolge.'));
+    main.appendChild(renderKO(VF_IDS));
+  } else if (tab === 'halb') {
+    main.appendChild(el('p', { class: 'hint' }, 'Halbfinale – Sieger 1. VF vs. Sieger 3. VF · Sieger 2. VF vs. Sieger 4. VF.'));
+    main.appendChild(renderKO(HF_IDS));
+  } else if (tab === 'finale') {
+    main.appendChild(el('p', { class: 'hint' }, 'Finale – Sieger Halbfinale 1 vs. Sieger Halbfinale 2.'));
+    main.appendChild(renderKO(['F'], 1));
+  } else if (tab === 'platz') {
+    main.appendChild(el('p', { class: 'hint' }, 'Platzierungsspiele – über die Verlierer der Achtel-, Viertel- und Halbfinale wird Platz 3 bis 16 ausgespielt.'));
+    main.appendChild(renderKO(PLACEMENT_ORDER));
+  } else if (tab === 'endstand') {
+    main.appendChild(renderRanking());
+  }
+}
+
+document.getElementById('resetBtn').onclick = () => {
+  if (confirm('Alle eingegebenen Ergebnisse wirklich zurücksetzen?')) {
+    results = {};
+    saveResults();
+    render();
+  }
+};
+
+render();
+</script>
+</body>
+</html>
