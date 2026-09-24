@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Faustball Turnierrechner</title>
 <style>
   :root {
@@ -68,6 +68,51 @@
   .empty { text-align: center; color: var(--muted); padding: 80px 16px; max-width: 480px; margin: 0 auto; }
   .btn { padding: 6px 14px; border-radius: 8px; border: 1px solid var(--border); background: #fff; font-size: 13px; cursor: pointer; }
   .btn:hover { background: #f9fafb; }
+
+  html { -webkit-text-size-adjust: 100%; }
+  body { min-width: 0; overflow-x: hidden; }
+  button, input { font: inherit; }
+  .header-inner { padding: 12px 14px; gap: 10px; }
+  .header-inner > div:first-child { min-width: 0; }
+  h1 { font-size: clamp(17px, 5vw, 22px); }
+  .subtitle { line-height: 1.3; margin-top: 3px; }
+  .tabs {
+    padding: 0 12px 10px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    touch-action: pan-x;
+  }
+  .tab { flex: 0 0 auto; min-height: 38px; padding: 8px 13px; }
+  main { width: 100%; padding: 16px 12px 32px; }
+  .grid2 { grid-template-columns: 1fr; gap: 16px; }
+  .group-card { min-width: 0; }
+  .table-scroll {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x;
+  }
+  .table-scroll table { min-width: 600px; }
+  .match { padding: 12px; }
+  .row { gap: 6px; }
+  .row .name { min-width: 0; font-size: 13px; }
+  input.score {
+    flex: 0 0 44px;
+    width: 44px;
+    height: 40px;
+    font-size: 16px;
+  }
+  .ko-grid { grid-template-columns: 1fr; gap: 10px; }
+  .empty { padding: 50px 12px; }
+  @media (min-width: 600px) {
+    .grid2 { grid-template-columns: 1fr 1fr; }
+    .ko-grid { grid-template-columns: 1fr 1fr; }
+  }
+  @media (min-width: 768px) {
+    .header-inner, .tabs, main { max-width: 1120px; }
+  }
+
 </style>
 </head>
 <body>
@@ -80,10 +125,18 @@
     </div>
     <button class="btn" id="resetBtn">Zurücksetzen</button>
   </div>
-  <div class="tabs" id="tabs"></div>
+  <div class="tabs" id="tabs">
+    <button class="tab active" type="button">Gruppenphase</button>
+    <button class="tab" type="button">Achtelfinale</button>
+    <button class="tab" type="button">Viertelfinale</button>
+    <button class="tab" type="button">Halbfinale</button>
+    <button class="tab" type="button">Finale</button>
+    <button class="tab" type="button">Platzierungsspiele</button>
+    <button class="tab" type="button">Endstand</button>
+  </div>
 </header>
 
-<main id="main"></main>
+<main id="main"><div class="empty">Turnierrechner wird geladen …</div></main>
 
 <script>
 const GROUPS = {
@@ -305,7 +358,8 @@ function renderMatch(label, homeTeam, awayTeam, sets, matchId, mode) {
     }
     results[matchId] = { sets: next };
     saveResults();
-    render();
+    // Nicht bei jedem Tastendruck neu rendern: sonst verliert das Eingabefeld
+    // auf iPhone/Android den Fokus und man kann nur eine Ziffer eingeben.
   };
 
   ['H', 'A'].forEach(side => {
@@ -320,6 +374,14 @@ function renderMatch(label, homeTeam, awayTeam, sets, matchId, mode) {
       });
       if (disabled) input.disabled = true;
       input.oninput = e => update(i, side === 'H' ? 'a' : 'b', e.target.value);
+      // Erst nach dem Verlassen/Bestätigen des Feldes die Anzeige neu aufbauen.
+      input.onchange = () => render();
+      input.onkeydown = e => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          e.target.blur();
+        }
+      };
       row.appendChild(input);
     });
     card.appendChild(row);
@@ -352,7 +414,9 @@ function renderGroup(group) {
     tbody.appendChild(tr);
   });
   table.appendChild(tbody);
-  card.appendChild(table);
+  const tableScroll = el('div', { class: 'table-scroll' });
+  tableScroll.appendChild(table);
+  card.appendChild(tableScroll);
   wrap.appendChild(card);
 
   const matches = el('div', { class: 'matches' });
@@ -422,15 +486,35 @@ function render() {
   }
 }
 
-document.getElementById('resetBtn').onclick = () => {
-  if (confirm('Alle eingegebenen Ergebnisse wirklich zurücksetzen?')) {
-    results = {};
-    saveResults();
+function initApp() {
+  try {
+    const resetBtn = document.getElementById('resetBtn');
+    if (resetBtn) {
+      resetBtn.onclick = () => {
+        if (confirm('Alle eingegebenen Ergebnisse wirklich zurücksetzen?')) {
+          results = {};
+          saveResults();
+          render();
+        }
+      };
+    }
     render();
+  } catch (error) {
+    console.error(error);
+    const main = document.getElementById('main');
+    if (main) {
+      main.innerHTML =
+        '<div class="empty"><strong>Der Turnierrechner konnte nicht gestartet werden.</strong><br><br>' +
+        'Bitte die HTML-Datei in Safari, Chrome oder Firefox öffnen – nicht in einer Datei-Vorschau.</div>';
+    }
   }
-};
+}
 
-render();
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initApp);
+} else {
+  initApp();
+}
 </script>
 </body>
 </html>
